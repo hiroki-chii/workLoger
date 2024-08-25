@@ -3,14 +3,16 @@ import TkEasyGUI as eg
 import ctypes
 import time
 import win32process, win32api, win32con
-import os
+from pathlib import Path
+import psutil
+import getpass
 import stat
 import datetime
 import openpyxl
 import pywintypes
 
 TITLE = "PC業務記録"
-desktop_dir = os.path.expanduser("~/Desktop")
+desktop_dir = Path.home() / "Desktop"
 pitch_time = 10  # 記録間隔
 
 
@@ -26,10 +28,8 @@ def get_active_window_info():
     _, pid = win32process.GetWindowThreadProcessId(hwnd)
     if hwnd != 0 or pid != 0:
         try:
-            hndl = win32api.OpenProcess(
-                win32con.PROCESS_QUERY_INFORMATION | win32con.PROCESS_VM_READ, 0, pid
-            )
-            exe_NAME = os.path.split(win32process.GetModuleFileNameEx(hndl, 0))[1]
+            process = psutil.Process(pid)
+            exe_NAME = process.name()
         except pywintypes.error:
             print("error")
             exe_NAME = ""
@@ -45,13 +45,15 @@ def record_loop():
     # 初期設定
     last_hwnd = 0
     pc_NAME = win32api.GetComputerName()  # コンピュータ名
-    login_id = os.getlogin()  # ログオンユーザー名
+    login_id = getpass.getuser()  # ログオンユーザー名
     yyyymmdd = datetime.datetime.now().strftime("%Y%m%d")  # 日付
-    os.makedirs(f"{desktop_dir}/PC業務記録データ", exist_ok=True)
-    out_file = f"{desktop_dir}/PC業務記録データ/{pc_NAME}_{yyyymmdd}.xlsx"  # ファイル名
+    if not (desktop_dir / "PC業務記録データ").exists():
+        (desktop_dir / "PC業務記録データ").mkdir()
+    out_file = f"{desktop_dir}\PC業務記録データ\{pc_NAME}_{yyyymmdd}.xlsx"  # ファイル名
     sheet_name = TITLE  # シート名
     # 出力ファイルが無ければ新規作成
-    if os.path.isfile(out_file) == False:
+    if (Path(out_file)).exists() == False:
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = sheet_name
@@ -67,7 +69,7 @@ def record_loop():
 
         wb.save(out_file)
         # test1.txt を読み取り専用にする
-        os.chmod(path=out_file, mode=stat.S_IREAD)
+        Path(out_file).chmod(0o444)
 
     try:
         while True:
@@ -104,10 +106,10 @@ def record_loop():
                 )  # ウィンドウハンドル、開始時間を保存
 
             # test2.txt の読み取り専用を外す
-            os.chmod(path=out_file, mode=stat.S_IWRITE)
+            Path(out_file).chmod(0o644)
             wb.save(out_file)
             # test1.txt を読み取り専用にする
-            os.chmod(path=out_file, mode=stat.S_IREAD)
+            Path(out_file).chmod(0o444)
             last_idl = new_idl  # アイドル時間を保存
             time.sleep(pitch_time)
 
@@ -125,11 +127,12 @@ window = eg.Window(TITLE, layout, size=(400, 150))
 while True:
     event, values = window.read()
     if event == eg.WIN_CLOSED or event == "-CANCEL-":
+        eg.popup("PC業務の記録を中断しました。")
         break
     elif event == "-START-":
         threading.Thread(target=record_loop, daemon=True).start()
         window["-MAIN-"].update(
             "PC業務記録中です。。。\n\n記録データは、\nデスクトップの「PC業務記録データ」フォルダ\nの中に保存されています。"
         )
-        window["-CANCEL-"].update("記録中止")
+        window["-CANCEL-"].update("記録中断")
         window["-START-"].update(disabled=True)
