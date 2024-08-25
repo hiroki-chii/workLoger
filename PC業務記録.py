@@ -1,12 +1,10 @@
 import threading
 import TkEasyGUI as eg
-import ctypes
 import time
-import win32process, win32api, win32con
+import win32process, win32api, win32gui, win32con
 from pathlib import Path
 import psutil
 import getpass
-import stat
 import datetime
 import openpyxl
 import pywintypes
@@ -18,13 +16,12 @@ pitch_time = 10  # 記録間隔
 
 def get_active_window_info():
     dt_now = datetime.datetime.now()  # 現在日付時刻
-    # フォアグラウンドのウィンドウハンドル取得
-    hwnd = ctypes.windll.user32.GetForegroundWindow()
-    length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
-    buff = ctypes.create_unicode_buffer(length + 1)
+    # フォアグラウンドウィンドウのハンドルを取得
+    hwnd = win32gui.GetForegroundWindow()
+    # ウィンドウタイトルを取得
+    title = win32gui.GetWindowText(hwnd)
     # ウィンドウタイトル取得
-    ctypes.windll.user32.GetWindowTextW(hwnd, buff, length + 1)
-    print("Active Window:", buff.value)
+    print("Active Window:", title)
     _, pid = win32process.GetWindowThreadProcessId(hwnd)
     if hwnd != 0 or pid != 0:
         try:
@@ -38,7 +35,7 @@ def get_active_window_info():
     if idl_time < pitch_time:
         # 短時間の場合 0 とする
         idl_time = 0
-    return hwnd, dt_now, buff.value, exe_NAME, idl_time
+    return hwnd, dt_now, title, exe_NAME, idl_time
 
 
 def record_loop():
@@ -68,8 +65,8 @@ def record_loop():
         ws.cell(row=1, column=8).value = "コンピュータ名"
 
         wb.save(out_file)
-        # test1.txt を読み取り専用にする
-        Path(out_file).chmod(0o444)
+        # # test1.txt を読み取り専用にする
+        # Path(out_file).chmod(0o444)
 
     try:
         while True:
@@ -105,11 +102,11 @@ def record_loop():
                     new_time,
                 )  # ウィンドウハンドル、開始時間を保存
 
-            # test2.txt の読み取り専用を外す
-            Path(out_file).chmod(0o644)
+            # # test2.txt の読み取り専用を外す
+            # Path(out_file).chmod(0o644)
             wb.save(out_file)
-            # test1.txt を読み取り専用にする
-            Path(out_file).chmod(0o444)
+            # # test1.txt を読み取り専用にする
+            # Path(out_file).chmod(0o444)
             last_idl = new_idl  # アイドル時間を保存
             time.sleep(pitch_time)
 
