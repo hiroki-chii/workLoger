@@ -66,7 +66,7 @@ def record_loop():
 
         wb.save(out_file)
         # # test1.txt を読み取り専用にする
-        # Path(out_file).chmod(0o444)
+        Path(out_file).chmod(0o444)
 
     try:
         while True:
@@ -103,10 +103,10 @@ def record_loop():
                 )  # ウィンドウハンドル、開始時間を保存
 
             # # test2.txt の読み取り専用を外す
-            # Path(out_file).chmod(0o644)
+            Path(out_file).chmod(0o644)
             wb.save(out_file)
             # # test1.txt を読み取り専用にする
-            # Path(out_file).chmod(0o444)
+            Path(out_file).chmod(0o444)
             last_idl = new_idl  # アイドル時間を保存
             time.sleep(pitch_time)
 
