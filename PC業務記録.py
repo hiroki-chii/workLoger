@@ -8,10 +8,11 @@ import getpass
 import datetime
 import openpyxl
 import pywintypes
+import sys
 
 TITLE = "PC業務記録"
 desktop_dir = Path.home() / "Desktop"
-pitch_time = 10  # 記録間隔
+pitch_time = 30  # 記録間隔
 
 
 def get_active_window_info():
@@ -46,7 +47,9 @@ def record_loop():
     yyyymmdd = datetime.datetime.now().strftime("%Y%m%d")  # 日付
     if not (desktop_dir / "PC業務記録データ").exists():
         (desktop_dir / "PC業務記録データ").mkdir()
-    out_file = f"{desktop_dir}\PC業務記録データ\{pc_NAME}_{yyyymmdd}.xlsx"  # ファイル名
+    out_file = (
+        f"{desktop_dir}\PC業務記録データ\{login_id}_{yyyymmdd}.xlsx"  # ファイル名
+    )
     sheet_name = TITLE  # シート名
     # 出力ファイルが無ければ新規作成
     if (Path(out_file)).exists() == False:
@@ -55,14 +58,21 @@ def record_loop():
         ws = wb.active
         ws.title = sheet_name
         ws.cell(row=1, column=1).value = f"開始時間({pitch_time}秒ごとに記録)"
-
+        ws.column_dimensions["A"].width = 30
         ws.cell(row=1, column=2).value = f"終了時間({pitch_time}秒ごとに記録)"
+        ws.column_dimensions["B"].width = 30
         ws.cell(row=1, column=3).value = f"経過時間({pitch_time}秒ごとに記録)"
+        ws.column_dimensions["C"].width = 30
         ws.cell(row=1, column=4).value = "タイトル"
+        ws.column_dimensions["D"].width = 50
         ws.cell(row=1, column=5).value = "アプリケーション名"
+        ws.column_dimensions["E"].width = 20
         ws.cell(row=1, column=6).value = "アイドル時間(秒)"
+        ws.column_dimensions["F"].width = 20
         ws.cell(row=1, column=7).value = "ログインid"
+        ws.column_dimensions["G"].width = 20
         ws.cell(row=1, column=8).value = "コンピュータ名"
+        ws.column_dimensions["H"].width = 20
 
         wb.save(out_file)
         # # test1.txt を読み取り専用にする
@@ -101,6 +111,7 @@ def record_loop():
                     new_hwnd,
                     new_time,
                 )  # ウィンドウハンドル、開始時間を保存
+                window["-TITLE-"].update(new_title)
 
             # # test2.txt の読み取り専用を外す
             Path(out_file).chmod(0o644)
@@ -110,16 +121,18 @@ def record_loop():
             last_idl = new_idl  # アイドル時間を保存
             time.sleep(pitch_time)
 
-    except KeyboardInterrupt:
-        print("FINISH!")
+    except Exception as e:
+        print(e)
+        window["-MAIN-"].update(f"エラーが発生しているため記録を中断しました。\n\n{e}")
 
 
 layout = [
     [eg.Text("PC業務の記録を開始します。", key="-MAIN-")],
+    [eg.Text("", key="-TITLE-")],
     [eg.Button("記録開始", key="-START-"), eg.Button("キャンセル", key="-CANCEL-")],
 ]
 
-window = eg.Window(TITLE, layout, size=(400, 150))
+window = eg.Window(TITLE, layout, size=(500, 200))
 
 while True:
     event, values = window.read()
