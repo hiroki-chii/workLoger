@@ -3,12 +3,11 @@ import TkEasyGUI as eg
 import time
 import win32process, win32api, win32gui, win32con
 from pathlib import Path
-import psutil
+import os
 import getpass
 import datetime
 import openpyxl
 import pywintypes
-import sys
 
 TITLE = "PC業務記録"
 desktop_dir = Path.home() / "Desktop"
@@ -24,10 +23,12 @@ def get_active_window_info():
     # ウィンドウタイトル取得
     print("Active Window:", title)
     _, pid = win32process.GetWindowThreadProcessId(hwnd)
-    if hwnd != 0 or pid != 0:
+    if hwnd != 0 or pid > 0:
         try:
-            process = psutil.Process(pid)
-            exe_NAME = process.name()
+            hndl = win32api.OpenProcess(
+                win32con.PROCESS_QUERY_INFORMATION | win32con.PROCESS_VM_READ, 0, pid
+            )
+            exe_NAME = os.path.split(win32process.GetModuleFileNameEx(hndl, 0))[1]
         except pywintypes.error:
             print("error")
             exe_NAME = ""
